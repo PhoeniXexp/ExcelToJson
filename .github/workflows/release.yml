@@ -27,28 +27,33 @@ jobs:
 
       - name: Verify build output
         run: |
-          $path = ".\ExcelToJson\bin\Release\net8.0-windows"
-          if (!(Test-Path $path)) {
-            Write-Error "Build output directory does not exist: $path"
-            exit 1
-          }
-          Get-ChildItem -Path $path -Recurse | Format-Table FullName
+          $buildPath = "$env:GITHUB_WORKSPACE\ExcelToJson\bin\Release\net8.0-windows"
+          Write-Output "Build path: $buildPath"
+          Get-ChildItem -Path $buildPath -Recurse | Format-Table FullName
 
-      - name: Create archive with 7-Zip
+      - name: Create archive
         run: |
-          $source = ".\ExcelToJson\bin\Release\net8.0-windows"
-          $destination = ".\ExcelToJson\ExcelToJson.zip"
+          $source = "$env:GITHUB_WORKSPACE\ExcelToJson\bin\Release\net8.0-windows"
+          $destination = "$env:GITHUB_WORKSPACE\ExcelToJson\ExcelToJson.zip"
           
-          # Создаем архив, сохраняя структуру папок
-          7z a $destination "$source\*" -r -mx=9 -x!*.pdb -x!*.xml -x!*.config
+          # Создаем временную папку и копируем туда нужные файлы
+          $tempDir = "$env:RUNNER_TEMP\publish"
+          New-Item -ItemType Directory -Path $tempDir -Force
+          Copy-Item "$source\*" $tempDir -Recurse -Exclude "*.pdb","*.xml","*.config"
+          
+          # Создаем архив из временной папки
+          7z a "$destination" "$tempDir\*" -r -mx=9
+          
+          # Проверяем содержимое архива
+          7z l "$destination"
           
           # Проверяем размер архива
-          if (!(Test-Path $destination)) {
-            Write-Error "Archive was not created"
-            exit 1
+          $archive = Get-Item $destination
+          Write-Output "Archive size: $($archive.Length) bytes"
+          if ($archive.Length -lt 1024) {
+              Write-Error "Archive is too small - likely empty"
+              exit 1
           }
-          Write-Output "Archive created successfully:"
-          dir $destination
 
       - name: Create release
         id: create_release
@@ -58,7 +63,8 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           name: Release ${{ github.ref_name }}
-          files: .\ExcelToJson\ExcelToJson.zip
+          files: |
+            ExcelToJson/ExcelToJson.zip
           draft: false
           prerelease: false
           generate_release_notes: true
