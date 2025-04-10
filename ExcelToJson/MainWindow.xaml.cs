@@ -11,10 +11,11 @@ namespace ExcelToJson
     /// </summary>
     public partial class MainWindow : Window
     {
+        private string _filePath = string.Empty;
+
         public MainWindow()
         {
             InitializeComponent();
-
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         }
 
@@ -29,7 +30,12 @@ namespace ExcelToJson
                     if (Path.GetExtension(filePath).Equals(".xlsx", StringComparison.OrdinalIgnoreCase) ||
                         Path.GetExtension(filePath).Equals(".xls", StringComparison.OrdinalIgnoreCase))
                     {
-                        ProcessExcelFile(filePath);
+                        var headers = GetExcelHeaders(filePath);
+                        var fieldMappings = GenerateDefaultMappings(headers);
+
+                        TextBox_JsonSchema.Text = JsonConvert.SerializeObject(fieldMappings, Formatting.Indented);
+                        Button_Save.IsEnabled = true;
+                        _filePath = filePath;
                     }
                     else
                     {
@@ -39,29 +45,95 @@ namespace ExcelToJson
             }
         }
 
-        private void ProcessExcelFile(string filePath)
+        private List<string> GetExcelHeaders(string filePath)
         {
-            var file = new FileInfo(filePath);
-            using (var package = new ExcelPackage(file))
+            var headers = new List<string>();
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            {
+                var worksheet = package.Workbook.Worksheets[0];
+                var colCount = worksheet.Dimension.Columns;
+
+                for (int col = 1; col <= colCount; col++)
+                {
+                    headers.Add(worksheet.Cells[1, col].Text);
+                }
+            }
+            return headers;
+        }
+
+        private Dictionary<string, string> GenerateDefaultMappings(List<string> headers)
+        {
+            var mappings = new Dictionary<string, string>();
+            foreach (var header in headers)
+            {
+                mappings[header] = header;
+            }
+            return mappings;
+        }
+
+        private List<Dictionary<string, object?>> ConvertExcelToJson(string filePath, Dictionary<string, string> mappings)
+        {
+            var result = new List<Dictionary<string, object?>>();
+
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
             {
                 var worksheet = package.Workbook.Worksheets[0];
                 var rowCount = worksheet.Dimension.Rows;
                 var colCount = worksheet.Dimension.Columns;
-                var data = new List<Dictionary<string, object>>();
 
                 for (int row = 2; row <= rowCount; row++)
                 {
-                    var rowDict = new Dictionary<string, object>();
+                    var rowDict = new Dictionary<string, object?>();
+
                     for (int col = 1; col <= colCount; col++)
                     {
                         var columnName = worksheet.Cells[1, col].Text;
                         var cellValue = worksheet.Cells[row, col].Text;
-                        rowDict[columnName] = cellValue;
+
+                        if (mappings.ContainsKey(columnName))
+                        {
+                            AddNestedValue(rowDict, mappings[columnName], cellValue);
+                        }
                     }
-                    data.Add(rowDict);
+
+                    result.Add(rowDict);
                 }
-                var json = JsonConvert.SerializeObject(data, Newtonsoft.Json.Formatting.Indented);
-                SaveJsonToFile(json);
+            }
+
+            return result;
+        }
+
+        private void AddNestedValue(Dictionary<string, object?> dict, string path, object? value)
+        {
+            var parts = path.Split('.');
+            var current = dict;
+
+            for (int i = 0; i < parts.Length - 1; i++)
+            {
+                if (!current!.ContainsKey(parts[i]))
+                {
+                    current[parts[i]] = new Dictionary<string, object?>();
+                }
+                current = (Dictionary<string, object?>)current[parts[i]]!;
+            }
+
+            if (value is string && (string)value == string.Empty) value = null;
+
+            current[parts.Last()] = value;
+        }
+
+        private void Button_Save_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var fieldMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(TextBox_JsonSchema.Text)!;
+                var jsonData = ConvertExcelToJson(_filePath, fieldMappings);
+
+                SaveJsonToFile(JsonConvert.SerializeObject(jsonData, Formatting.Indented));
+            }
+            catch
+            {
+                MessageBox.Show("Schema error");
             }
         }
 

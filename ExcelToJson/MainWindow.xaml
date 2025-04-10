@@ -10,13 +10,48 @@
     Height="450"
     mc:Ignorable="d">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
         <Grid
             x:Name="DragNDrop"
-            Margin="20"
+            Grid.Column="0"
+            Margin="20,20,20,20"
             AllowDrop="True"
             Background="#FF9C9887"
             Drop="Grid_Drop">
-            <Label Content="Drop here" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="36"/>
+            <Label
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Content="Drop here"
+                FontSize="36" />
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="50" />
+            </Grid.RowDefinitions>
+            <TextBox
+                x:Name="TextBox_JsonSchema"
+                Grid.Row="0"
+                Margin="10"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                TextWrapping="Wrap" />
+            <Button
+                x:Name="Button_Save"
+                Grid.Row="1"
+                Width="100"
+                Margin="10"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Click="Button_Save_Click"
+                Content="Save"
+                FontSize="15"
+                IsEnabled="False" />
+
+
         </Grid>
     </Grid>
 </Window>
