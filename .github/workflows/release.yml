@@ -16,41 +16,29 @@ jobs:
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Set up build environment
-        run: |
-          echo "Setting up build environment..."
-
       - name: Restore NuGet packages
-        run: |
-          nuget restore ExcelToJson.sln
+        run: nuget restore ExcelToJson.sln
 
       - name: Build project
-        run: |
-          msbuild ExcelToJson.sln /p:Configuration=Release
+        run: msbuild ExcelToJson.sln /p:Configuration=Release
 
-      - name: Create clean archive
+      - name: Install 7-Zip
+        run: choco install 7zip -y
+
+      - name: Create archive with 7-Zip
         run: |
-          $files = Get-ChildItem -Path .\ExcelToJson\bin\Release\net8.0-windows\* -Exclude *.pdb, *.xml
-          Compress-Archive -Path $files -DestinationPath .\ExcelToJson\ExcelToJson.zip
+          7z a ExcelToJson.zip .\ExcelToJson\bin\Release\net8.0-windows\* -x!*.pdb -x!*.xml
+          mv ExcelToJson.zip .\ExcelToJson\
 
       - name: Create release
         id: create_release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           name: Release ${{ github.ref_name }}
+          files: .\ExcelToJson\ExcelToJson.zip
           draft: false
           prerelease: false
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload archive to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: .\ExcelToJson\ExcelToJson.zip
-          asset_name: ExcelToJson.zip
-          asset_content_type: application/zip
