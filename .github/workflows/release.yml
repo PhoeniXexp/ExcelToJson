@@ -28,9 +28,10 @@ jobs:
         run: |
           msbuild ExcelToJson.sln /p:Configuration=Release
 
-      - name: Create archive
+      - name: Create clean archive
         run: |
-          Compress-Archive -Path .\ExcelToJson\bin\Release\net8.0-windows\* -DestinationPath .\ExcelToJson\ExcelToJson.zip
+          $files = Get-ChildItem -Path .\ExcelToJson\bin\Release\net8.0-windows\* -Exclude *.pdb, *.xml
+          Compress-Archive -Path $files -DestinationPath .\ExcelToJson\ExcelToJson.zip
 
       - name: Create release
         id: create_release
