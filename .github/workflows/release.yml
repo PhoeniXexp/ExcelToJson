@@ -25,13 +25,15 @@ jobs:
       - name: Install 7-Zip
         run: choco install 7zip -y
 
+      - name: Debug - List files
+        run: dir .\ExcelToJson\bin\Release\net8.0-windows\ /s
+
       - name: Create archive with 7-Zip
         run: |
-          mkdir temp_publish
-          copy .\ExcelToJson\bin\Release\net8.0-windows\* temp_publish\
-          7z a ExcelToJson.zip .\temp_publish\* -xr!*.pdb -xr!*.xml -xr!*.config
-          move ExcelToJson.zip .\ExcelToJson\
-          rmdir /s /q temp_publish
+          cd .\ExcelToJson\bin\Release\net8.0-windows\
+          7z a ..\..\..\ExcelToJson.zip * -r -x!*.pdb -x!*.xml -x!*.config
+          cd ..\..\..\..\
+          move .\ExcelToJson\bin\Release\net8.0-windows\ExcelToJson.zip .\ExcelToJson\
 
       - name: Create release
         id: create_release
