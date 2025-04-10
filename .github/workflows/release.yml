@@ -35,19 +35,11 @@ jobs:
         run: |
           $source = "$env:GITHUB_WORKSPACE\ExcelToJson\bin\Release\net8.0-windows"
           $destination = "$env:GITHUB_WORKSPACE\ExcelToJson\ExcelToJson.zip"
-          
-          # Создаем временную папку и копируем туда нужные файлы
           $tempDir = "$env:RUNNER_TEMP\publish"
           New-Item -ItemType Directory -Path $tempDir -Force
           Copy-Item "$source\*" $tempDir -Recurse -Exclude "*.pdb","*.xml","*.config"
-          
-          # Создаем архив из временной папки
           7z a "$destination" "$tempDir\*" -r -mx=9
-          
-          # Проверяем содержимое архива
           7z l "$destination"
-          
-          # Проверяем размер архива
           $archive = Get-Item $destination
           Write-Output "Archive size: $($archive.Length) bytes"
           if ($archive.Length -lt 1024) {
