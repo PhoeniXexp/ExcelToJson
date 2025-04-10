@@ -27,7 +27,7 @@ jobs:
 
       - name: Create archive with 7-Zip
         run: |
-          7z a ExcelToJson.zip .\ExcelToJson\bin\Release\net8.0-windows\* -x!*.pdb -x!*.xml
+          7z a ExcelToJson.zip .\ExcelToJson\bin\Release\net8.0-windows\* -xr!*.pdb -xr!*.xml
           mv ExcelToJson.zip .\ExcelToJson\
 
       - name: Create release
