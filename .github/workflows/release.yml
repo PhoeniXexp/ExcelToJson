@@ -25,15 +25,30 @@ jobs:
       - name: Install 7-Zip
         run: choco install 7zip -y
 
-      - name: Debug - List files
-        run: dir .\ExcelToJson\bin\Release\net8.0-windows\ /s
+      - name: Verify build output
+        run: |
+          $path = ".\ExcelToJson\bin\Release\net8.0-windows"
+          if (!(Test-Path $path)) {
+            Write-Error "Build output directory does not exist: $path"
+            exit 1
+          }
+          Get-ChildItem -Path $path -Recurse | Format-Table FullName
 
       - name: Create archive with 7-Zip
         run: |
-          cd .\ExcelToJson\bin\Release\net8.0-windows\
-          7z a ..\..\..\ExcelToJson.zip * -r -x!*.pdb -x!*.xml -x!*.config
-          cd ..\..\..\..\
-          move .\ExcelToJson\bin\Release\net8.0-windows\ExcelToJson.zip .\ExcelToJson\
+          $source = ".\ExcelToJson\bin\Release\net8.0-windows"
+          $destination = ".\ExcelToJson\ExcelToJson.zip"
+          
+          # Создаем архив, сохраняя структуру папок
+          7z a $destination "$source\*" -r -mx=9 -x!*.pdb -x!*.xml -x!*.config
+          
+          # Проверяем размер архива
+          if (!(Test-Path $destination)) {
+            Write-Error "Archive was not created"
+            exit 1
+          }
+          Write-Output "Archive created successfully:"
+          dir $destination
 
       - name: Create release
         id: create_release
